@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Items Inventory Management</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", sans-serif;
+        background-color: #f4f4f9;
+        color: #2c3e50;
+      }
+
+      nav {
+        background-color: #ffffff;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .nav-btn {
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        font-family: "Segoe UI", sans-serif;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .nav-btn:hover {
+        background-color: #f0f0f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .nav-btn i {
+        font-size: 1.2rem;
+      }
+
+      .nav-buttons {
+        display: flex;
+        gap: 0.75rem;
+      }
+
+      #toggleTheme {
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease,
+          box-shadow 0.3s ease;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      #toggleTheme:hover {
+        background-color: #f0f0f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .dark-mode #toggleTheme {
+        background-color: #34495e;
+        color: #ffffff;
+        border-color: #4b5e73;
+      }
+
+      .dark-mode #toggleTheme:hover {
+        background-color: #2c3e50;
+        color: #ffffff;
+        border-color: #4b5e73;
+        box-shadow: 0 1px 3px rgba(255, 255, 255, 0.1);
+      }
+
+      .user-info {
+        display: none;
+        /* Hide user info */
+      }
+
+      .user-info i {
+        font-size: 1.5rem;
+        color: #7f8c8d;
+      }
+
+      .user-info span {
+        font-size: 0.875rem;
+        color: #555555;
+      }
+
+      .user-info span:first-child {
+        font-weight: 600;
+        margin-right: 0.5rem;
+      }
+
+      .search-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .search-input {
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        width: 250px;
+        transition: border-color 0.2s ease;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+      }
+
+      .search-btn {
+        background-color: #3498db;
+        color: #ffffff;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        font-family: "Segoe UI", sans-serif;
+        font-weight: 600;
+      }
+
+      .search-btn:hover {
+        background-color: #2980b9;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .search-btn i {
+        font-size: 1.2rem;
+      }
+
+      .container {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .container h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+
+      #chemicalList {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      #chemicalList table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        background-color: #ffffff;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 0.5rem;
+      }
+
+      #chemicalList table thead tr {
+        background-color: #3498db;
+        color: #ffffff;
+        text-align: left;
+      }
+
+      #chemicalList table th,
+      #chemicalList table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #ddd;
+      }
+
+      #chemicalList table th {
+        font-weight: 600;
+      }
+
+      #chemicalList table tbody tr:hover {
+        background-color: #f0f0f0;
+      }
+
+      .dark-mode {
+        background-color: #121212;
+        color: #ffffff;
+      }
+
+      .dark-mode nav {
+        background-color: #1e1e1e;
+        box-shadow: 0 1px 3px rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid #333;
+      }
+
+      .dark-mode .nav-btn {
+        background-color: #2c3e50;
+        color: #ffffff;
+        border-color: #4b5e73;
+      }
+
+      .dark-mode .nav-btn:hover {
+        background-color: #34495e;
+        color: #ffffff;
+        border-color: #4b5e73;
+        box-shadow: 0 1px 3px rgba(255, 255, 255, 0.1);
+      }
+
+      .dark-mode .search-input {
+        background-color: #2c3e50;
+        color: #ffffff;
+        border-color: #4b5e73;
+      }
+
+      .dark-mode .search-input:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+      }
+
+      .dark-mode .search-btn {
+        background-color: #3498db;
+        color: #ffffff;
+      }
+
+      .dark-mode .search-btn:hover {
+        background-color: #2980b9;
+      }
+
+      .dark-mode .chemical-item {
+        background-color: #1e1e1e;
+        color: #ffffff;
+        border-color: #333;
+      }
+
+      .dark-mode .chemical-name {
+        color: #ffffff;
+      }
+
+      .dark-mode .available-quantity {
+        color: #81c784;
+      }
+
+      .dark-mode #chemicalList table {
+        background-color: #1e1e1e;
+        box-shadow: 0 1px 3px rgba(255, 255, 255, 0.1);
+        border-color: #333;
+      }
+
+      .dark-mode #chemicalList table thead tr {
+        background-color: #34495e;
+        color: #ffffff;
+        border-bottom-color: #4b5e73;
+      }
+
+      .dark-mode #chemicalList table th,
+      .dark-mode #chemicalList table td {
+        border-bottom-color: #444;
+        color: #eee;
+      }
+
+      .dark-mode #chemicalList table tbody tr:hover {
+        background-color: #2c3e50;
+      }
+
+      .export-btn {
+        background-color: #2ecc71;
+        color: #ffffff;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        font-family: "Segoe UI", sans-serif;
+        font-weight: 600;
+        margin-left: 1rem;
+      }
+
+      .export-btn:hover {
+        background-color: #27ae60;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav>
+      <div class="nav-left">
+        <button class="nav-btn" onclick="goBack()">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+      </div>
+      <div class="nav-right">
+        <button class="export-btn" onclick="exportChemicalsToExcel()">
+          <i class="fas fa-file-excel"></i> Export to Excel
+        </button>
+      </div>
+    </nav>
+    <div class="container">
+      <h2>Chemicals List</h2>
+      <div id="chemicalList" class="chemical-list"></div>
+    </div>
+    <script>
+      const chemicals = [
+        "Acetamide",
+        "Acetic Acid",
+        "Acetanilide",
+        "Acetone",
+        "Acetyl Salicylic Acid (OOH)",
+        "Activated Zinc metal Powder",
+        "Agar Agar Powder",
+        "Alizarine",
+        "Aluminium Sulphate",
+        "Ammonia",
+        "Ammonium Chloride",
+        "Ammonium Ferrous Sulfate",
+        "Ammonium Hydroxide",
+        "Ammonium Iron (II) Sulphate)",
+        "Ammonium Oxalate",
+        "Ammonium Thiocyanate",
+        "Aniline",
+        "Barium Chloride",
+        "Barium Hydroxide",
+        "Benzaldehyde",
+        "Benzamide",
+        "Benzene",
+        "Benzoic Acid",
+        "Benzoinoxime",
+        "Benzidine",
+        "Bleaching Powder",
+        "Brass Fillings",
+        "Bromine water",
+        "Buffer capsules",
+        "Butan-2-one Extrapure",
+        "Calcon Carboxylic Acid",
+        "Calcium Carbonate",
+        "Calcium Chloride",
+        "Calcium Tetrachloride",
+        "Carboxy Methyl Cellulose",
+        "Cellulose Powder",
+        "Cetylpyridinium bromide",
+        "Charcoal Powder",
+        "Cobalt Nitrate",
+        "Cobaltous Chloride",
+        "Cobaltous chloride",
+        "Copper filings",
+        "Copper Sulphate",
+        "Cyclohexanone",
+        "Dextrose",
+        "Diethyl Ether",
+        "Dimethyl Glyoxime",
+        "di-Sodium Phosphate",
+        "Diphenylamine Ind.",
+        "Dithiozone",
+        "Dolomite Powder",
+        "EDTA",
+        "2,4-Dinitrophenol",
+        "Ethyl Acetate",
+        "Ethyl Alcohol",
+        "Ethyl Benzoate",
+        "Ethyl Benzoate for Synthesis",
+        "Ethyl Cellulose",
+        "Ethyl Methyl Ketone",
+        "Ethylenediamine",
+        "Ethanol",
+        "Ether Solvent",
+        "Fumaric Acid",
+        "Formaldehyde",
+        "Formalin",
+        "Formic Acid",
+        "Furfuraldehyde",
+        "Furfuryl Alcohol",
+        "Fehling Solution A",
+        "Fehling Solution B",
+        "Ferric Chloride",
+        "Ferrous Sulphate",
+        "Glacial Acetic Acid",
+        "Glucose (Dextrose/AVOS?)",
+        "Glycerin (Glycanine/Glycerol?)",
+        "Glycine",
+        "Guar Gum",
+        "Hexane",
+        "Hydrochloric Acid",
+        "Hydrogen Peroxide",
+        "Hydroxyethyl Cellulose",
+        "L-Alginine",
+        "L-Cystine",
+        "Iodine",
+        "Iodine Crystal",
+        "Iron Metal (Powder)",
+        "L-Volume for biochemistry",
+        "Liquid Paraffin (hard)",
+        "Liquid Paraffin (Light)",
+        "Lime Water",
+        "Leasel Acatate",
+        "Leal Nitrade",
+        "Methyl Cellulose",
+        "n-Butyl Alcohol",
+        "Magnesium Sulphate",
+        "Ortho Phosphoric Acid",
+        "2-Nitrophenol",
+        "3-Nitro Aniline",
+        "Oxalic Acid",
+        "Nitrobenzene",
+        "Methyl Acetate",
+        "Nickel Chloride",
+        "Mercuric Chloride",
+        "Picric Acid",
+        "Phthalic Acid",
+        "1-Naphthol",
+        "Methyl Orange",
+        "Polyvinyl Alcohol (cold)",
+        "Potassium Carbonate",
+        "Potassium Dichromate",
+        "p-Nitroaniline",
+        "Methylene Blue",
+        "Potassium Nitrate",
+        "Ninhydrin",
+        "Methanesulfonic Acid",
+        "n-Butyl Acetate",
+        "Phthalic Anhydride",
+        "Potassium Chloride",
+        "Methyl Alcohol",
+        "Nitroso-R Salt",
+        "Nickel Nitrate",
+        "Methanol",
+        "β-Naphthol",
+        "α-Naphthol",
+        "Naphthalene",
+        "p-Nitrophenol",
+        "Nitrobenzene",
+        "Potassium Permanganate",
+        "Potassium Persulfate",
+        "Potassium Bromide",
+        "Potassium Fluoride",
+        "Potassium Thiocyanate",
+        "Potassium Iodide",
+        "Potassium Dithionite",
+        "Nitric Acid",
+        "Orthophosphate",
+        "Nickel Acetate Hexahydrate",
+        "Phosphoric Acid",
+        "Nickel Sulphate",
+        "Potassium Hydroxide",
+        "Potassium Ferrocyanide",
+        "Phenolphthalein Indicator",
+        "Phenol",
+        "Potassium Chromate",
+        "p-Toluidine",
+        "Petroleum Ether",
+        "1,10-Phenanthroline Hydrate",
+        "Potassium Carbonate Anhydrous",
+        "Phenyl Hydrazine",
+        "Hydroquinone",
+        "Paraffin Wax Pure",
+        "Phthalic Anhydride",
+        "Rubeanic Acid",
+        "Resorcinol",
+        "Sodium Carbonate",
+        "Sodium Nitrate",
+        "Sodium Hydroxide Pellets",
+        "Sodium Phosphate Dibasic",
+        "Sodium Thiosulfate",
+        "Semicarbazide Hydrochloride",
+        "Sodium Potassium Tartrate",
+        "Sodium Sulphate Anhydrous",
+        "Sodium Azide",
+        "Sodium Iodide",
+        "Sodium Acetate",
+        "Sodium Sulphate",
+        "Sulphur Powder",
+        "Sodium Bicarbonate",
+        "Sodium Nitroprusside",
+        "Schiff's Reagent",
+        "Stannous Chloride",
+        "Urease",
+        "Sodium Sulphite Flakes",
+        "Starch Indicator",
+        "Silver Nitrate (AgNO₃)",
+        "Sodium Acetate",
+        "Sulfuric Acid",
+        "Spirit (Rectified Spirit)",
+        "Salicylic Acid",
+        "Thiourea",
+        "Tollens Reagent",
+        "Tollene",
+        "Urea",
+        "Zinc Sulphate",
+        "Zinc Choloride Powder",
+        "Zinc Oxide Pure",
+        "Zinc Dust",
+      ];
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadChemicals();
+        setupThemeToggle();
+      });
+
+      function loadChemicals() {
+        const list = document.getElementById("chemicalList");
+        if (!list) return;
+
+        list.innerHTML = "";
+        const table = document.createElement("table");
+        table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Chemical Name</th>
+        <th>Available Quantity</th>
+        <th>Last Updated Date</th>
+        <th>Last Updated Time</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+        const tbody = table.querySelector("tbody");
+
+        chemicals.forEach((chemical) => {
+          if (chemical.trim() === "") return;
+
+          let storedData = localStorage.getItem(chemical);
+          let quantity = "0",
+            date = "-",
+            time = "-";
+
+          if (storedData) {
+            try {
+              const parsed = JSON.parse(storedData);
+              quantity = parsed.quantity || "0";
+              date = parsed.lastUpdatedDate || "-";
+              time = parsed.lastUpdatedTime || "-"; // Make sure you are accessing this
+            } catch (e) {
+              console.warn(`Invalid data for ${chemical}`, storedData);
+            }
+          }
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+      <td>${chemical}</td>
+      <td>${quantity}</td>
+      <td>${date}</td>
+      <td>${time}</td> `;
+          tbody.appendChild(row);
+        });
+
+        list.appendChild(table);
+      }
+
+      function setQuantity(chemical) {
+        let quantityInput = document.getElementById(`set-${chemical}`);
+        if (!quantityInput) return;
+
+        let quantity = quantityInput.value;
+        if (quantity !== "") {
+          const now = new Date();
+          const lastUpdatedDate = now.toLocaleDateString();
+          const lastUpdatedTime = now.toLocaleTimeString();
+
+          const dataToStore = {
+            quantity: quantity,
+            lastUpdatedDate: lastUpdatedDate,
+            lastUpdatedTime: lastUpdatedTime,
+          };
+
+          localStorage.setItem(chemical, JSON.stringify(dataToStore));
+          document.getElementById(`quantity-${chemical}`).innerText = quantity;
+          quantityInput.value = "";
+
+          console.log(
+            `Saved ${chemical} with quantity ${quantity} at ${lastUpdatedDate} ${lastUpdatedTime}`
+          ); // Check if this log appears in your console
+        }
+      }
+
+      function updateChemical(chemical, quantity) {
+        const data = {
+          quantity: quantity.toString(),
+          lastUpdatedDate: new Date().toLocaleDateString(),
+          lastUpdatedTime: new Date().toLocaleTimeString(),
+        };
+        localStorage.setItem(chemical, JSON.stringify(data));
+      }
+
+      function setupThemeToggle() {
+        const toggleButton = document.getElementById("toggleTheme");
+        if (toggleButton) {
+          toggleButton.addEventListener("click", () => {
+            document.body.classList.toggle("dark-mode");
+          });
+        }
+      }
+
+      function goBack() {
+        window.history.back();
+      }
+
+      function exportChemicalsToExcel() {
+        let csv =
+          "Item Name,Available Quantity,Last Updated Date,Last Updated Time\n";
+
+        chemicals.forEach((chemical) => {
+          if (chemical.trim() === "") return;
+
+          let quantity = "0",
+            date = "-",
+            time = "-";
+
+          try {
+            const rawData = localStorage.getItem(chemical);
+            if (rawData) {
+              const data = JSON.parse(rawData);
+              quantity = data.quantity || "0";
+              date = data.lastUpdatedDate || "-";
+              time = data.lastUpdatedTime || "-";
+            }
+          } catch (e) {
+            console.warn(`Failed to parse JSON for ${chemical}`, e);
+          }
+
+          // Escape any special characters in chemical names and wrap date/time in quotes to treat them as text
+          const safeChemical = `"${chemical.replace(/"/g, '""')}"`;
+          const safeDate = `"${date}"`;
+          const safeTime = `"${time}"`;
+
+          // Append row to CSV
+          csv += `${safeChemical},${quantity},${safeDate},${safeTime}\n`;
+        });
+
+        console.log("Generated CSV:\n" + csv); // Debugging line
+
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.setAttribute("href", URL.createObjectURL(blob));
+        link.setAttribute("download", "Items_inventory.csv");
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadChemicals();
+      });
+
+      function loadChemicals() {
+        const list = document.getElementById("chemicalList");
+        if (!list) return;
+
+        list.innerHTML = "";
+        const table = document.createElement("table");
+        table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Chemical Name</th>
+                <th>Available Quantity</th>
+                <th>Last Updated Date</th>
+                <th>Last Updated Time</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+
+        const tbody = table.querySelector("tbody");
+
+        chemicals.forEach((chemical) => {
+          if (chemical.trim() === "") return;
+
+          let storedQuantity = localStorage.getItem(chemical) || "0";
+          let date = "-";
+          let time = "-";
+
+          // Attempt to retrieve date and time from localStorage, if available
+          const storedData = localStorage.getItem(chemical + "_data"); //Use a different key
+          if (storedData) {
+            try {
+              const parsedData = JSON.parse(storedData);
+              date = parsedData.lastUpdatedDate || "-";
+              time = parsedData.lastUpdatedTime || "-";
+            } catch (error) {
+              console.error("Error parsing stored data:", error);
+              // Handle the error, e.g., clear the invalid data
+              localStorage.removeItem(chemical + "_data");
+            }
+          }
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${chemical}</td>
+            <td>${storedQuantity}</td>
+            <td>${date}</td>
+            <td>${time}</td>
+        `;
+          tbody.appendChild(row);
+        });
+
+        list.appendChild(table);
+      }
+
+      const storedData = localStorage.getItem(chemical + "_data"); // You are appending "_data" to the key here
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          date = parsedData.lastUpdatedDate || "-";
+          time = parsedData.lastUpdatedTime || "-";
+        } catch (error) {
+          console.error("Error parsing stored data:", error);
+          localStorage.removeItem(chemical + "_data");
+        }
+      }
+    </script>
+  </body>
+</html>
