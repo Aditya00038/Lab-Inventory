@@ -15,20 +15,25 @@ function loadChemicals() {
 
     list.innerHTML = "";
     let hasChemicals = false;
+    const LOW_STOCK_THRESHOLD = 1; // Define your low stock threshold here
 
     chemicals.forEach(chemical => {
         if (chemical.trim() === "") return;
         hasChemicals = true;
         let storedData = localStorage.getItem(chemical);
         let storedQuantity = 0;
+        let lastUpdatedDate = '-';
+        let lastUpdatedTime = '-';
 
         if (storedData) {
             const data = JSON.parse(storedData);
-            storedQuantity = data.quantity || 0;
+            storedQuantity = parseInt(data.quantity) || 0;
+            lastUpdatedDate = data.lastUpdatedDate || '-';
+            lastUpdatedTime = data.lastUpdatedTime || '-';
         }
 
         let item = document.createElement("div");
-        item.className = "chemical-item";
+        item.className = `chemical-item${storedQuantity < LOW_STOCK_THRESHOLD ? ' low-stock' : ''}`; // Add low-stock class
         item.innerHTML = `
             <h3 class="chemical-name">${chemical}</h3>
             <div class="quantity-controls">
@@ -59,8 +64,8 @@ function setQuantity(chemical) {
     let quantityInput = document.getElementById(`set-${chemical}`);
     if (!quantityInput) return;
 
-    let quantity = quantityInput.value;
-    if (quantity !== "") {
+    let quantity = parseInt(quantityInput.value);
+    if (!isNaN(quantity)) {
         const now = new Date();
         const formattedDate = now.toLocaleDateString();
         const formattedTime = now.toLocaleTimeString();
@@ -73,6 +78,9 @@ function setQuantity(chemical) {
         localStorage.setItem(chemical, JSON.stringify(dataToStore));
         document.getElementById(`quantity-${chemical}`).innerText = quantity;
         quantityInput.value = "";
+
+        // Update the low-stock class immediately
+        updateLowStockClass(chemical, quantity);
 
         // Store user activity
         storeUserActivity(chemical, "set", quantity);
@@ -107,9 +115,29 @@ function useQuantity(chemical) {
     document.getElementById(`quantity-${chemical}`).innerText = newQuantity;
     usedInput.value = "";
 
+    // Update the low-stock class immediately
+    updateLowStockClass(chemical, newQuantity);
+
     // Store user activity
     storeUserActivity(chemical, "use", used);
 }
+
+function updateLowStockClass(chemical, currentQuantity) {
+    const itemDiv = Array.from(document.querySelectorAll('.chemical-item')).find(div => {
+        return div.querySelector('.chemical-name').textContent === chemical;
+    });
+    const LOW_STOCK_THRESHOLD = 10; // Ensure this matches your threshold in loadChemicals
+
+    if (itemDiv) {
+        if (currentQuantity < LOW_STOCK_THRESHOLD) {
+            itemDiv.classList.add('low-stock');
+        } else {
+            itemDiv.classList.remove('low-stock');
+        }
+    }
+}
+
+// ... (rest of your JavaScript code)
 
 function resetQuantities() {
     chemicals.forEach(chemical => localStorage.removeItem(chemical));
