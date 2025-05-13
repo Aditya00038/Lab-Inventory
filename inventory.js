@@ -1,4 +1,5 @@
-const chemicals = [
+// === 1. Constants & Data ===
+const chemicals = [ 
   "Acetamide",
   "Acetic Acid",
   "Acetanilide",
@@ -186,109 +187,207 @@ const chemicals = [
   "Zinc Choloride Powder",
   "Zinc Oxide Pure",
   "Zinc Dust",
-];
+ ];
 
-document.addEventListener("DOMContentLoaded", () => {
+// Map known liquids; everything else → solid
+const chemicalTypes = {
+  "Acetone": "liquid", "Diethyl Ether": "liquid", "Ether Solvent": "liquid",
+  "Ethyl Acetate": "liquid", "Ethyl Alcohol": "liquid", "Ethanol": "liquid",
+  "Methanol": "liquid", "Methyl Alcohol": "liquid", "n-Butyl Alcohol": "liquid",
+  "Petroleum Ether": "liquid", "Hexane": "liquid", "Bromine water": "liquid",
+  "Formalin": "liquid", "Formaldehyde": "liquid", "Hydrochloric Acid": "liquid",
+  "Nitric Acid": "liquid", "Sulfuric Acid": "liquid", "Hydrogen Peroxide": "liquid",
+  "Lime Water": "liquid", "Liquid Paraffin (hard)": "liquid",
+  "Liquid Paraffin (Light)": "liquid", "Acetic Acid": "liquid",
+  "Glacial Acetic Acid": "liquid", "Ortho Phosphoric Acid": "liquid",
+  "Phosphoric Acid": "liquid", "Methyl Acetate": "liquid", "Furfuraldehyde": "liquid",
+  "Furfuryl Alcohol": "liquid"
+};
+function getChemicalType(name) {
+  return chemicalTypes[name] || "solid";
+}
+
+const MASS_FACTORS = { kg:1000, g:1, mg:0.001 };
+const VOL_FACTORS  = { l:1000, ml:1 };
+const LOW_STOCK_THRESHOLD_BASE = 10; // in base unit
+const undoStack = [];
+
+// === 2. Conversion Helpers ===
+function isMassUnit(u){ return MASS_FACTORS[u]!==undefined; }
+function isVolUnit(u){ return VOL_FACTORS[u]!==undefined; }
+function toBase(v,u){ return isMassUnit(u)?v*MASS_FACTORS[u]: isVolUnit(u)?v*VOL_FACTORS[u]:v; }
+function fromBase(v,u){ return isMassUnit(u)?v/MASS_FACTORS[u]: isVolUnit(u)?v/VOL_FACTORS[u]:v; }
+
+// === 3. Lifecycle Setup ===
+document.addEventListener("DOMContentLoaded",()=>{
+  setupThemeFromStorage();
   loadChemicals();
-  setupThemeToggle();
-  displayLoggedInUser();
   setupSearch();
+  document.getElementById("showMass").onclick = ()=>filterByType('mass');
+  document.getElementById("showVol").onclick  = ()=>filterByType('volume');
+  document.getElementById("exportAll").onclick = exportInventoryCSV;
+  document.getElementById("bulkImport").onclick = showBulkImportModal;
 });
 
-function loadChemicals() {
+// === 4. Render Inventory ===
+function loadChemicals(){
   const list = document.getElementById("chemicalList");
-  if (!list) return;
-
   list.innerHTML = "";
-  let hasChemicals = false; // Flag to check if any chemical is added
 
-  chemicals.forEach((chemical) => {
-    if (chemical.trim() === "") return;
-    hasChemicals = true; // Set flag to true if a chemical is found
-    let storedData = localStorage.getItem(chemical);
-    let storedQuantity = 0;
-    if (storedData) {
-      try {
-        const parsed = JSON.parse(storedData);
-        storedQuantity = parsed.quantity || 0;
-      } catch {
-        storedQuantity = storedData; // fallback if it's still a plain number
-      }
+  chemicals.forEach(name=>{
+    if(!name.trim()) return;
+    let raw = localStorage.getItem(name),
+        baseQty=0, unit='g', lastUpdated=null;
+
+    if(raw){
+      try{
+        const o=JSON.parse(raw);
+        baseQty = o.baseQty||0;
+        unit    = o.unit||unit;
+        lastUpdated = o.lastUpdated;
+      }catch{ baseQty = parseFloat(raw)||0; }
     }
-    let item = document.createElement("div");
-    item.className = "chemical-item";
-    item.innerHTML = `
-            <h3 class="chemical-name">${chemical}</h3>
-            <div class="quantity-controls">
-                <label for="set-${chemical}">Set Quantity:</label>
-                <input type="number" id="set-${chemical}" placeholder="Set Quantity" min="0">
-                <button onclick="setQuantity('${chemical}')">Set</button>
-            </div>
-            <div class="quantity-controls">
-                <label for="use-${chemical}">Use Quantity:</label>
-                <input type="number" id="use-${chemical}" placeholder="Use Quantity" min="0">
-                <button onclick="useQuantity('${chemical}')">Use</button>
-                <p class="available-quantity">Available: <span id="quantity-${chemical}">${storedQuantity}</span></p>
-            </div>
-        `;
-    list.appendChild(item);
+
+    const displayQty = fromBase(baseQty,unit).toFixed(2);
+    const type = isMassUnit(unit)?'mass': isVolUnit(unit)?'volume':'other';
+    const lowStock = baseQty < LOW_STOCK_THRESHOLD_BASE;
+    const chemType = getChemicalType(name);
+    const unitOptions = chemType==='liquid'
+      ? `<option value="ml">mL</option><option value="l">L</option>`
+      : `<option value="mg">mg</option><option value="g">g</option><option value="kg">kg</option>`;
+
+    const div = document.createElement("div");
+    div.id = `item-${name}`;
+    div.className = `chemical-item${lowStock?' low-stock':''}`;
+    div.dataset.type = type;
+    div.innerHTML = `
+      <h3 class="chemical-name">${name}</h3>
+      <div class="quantity-controls">
+        <label for="set-${name}">Set Qty:</label>
+        <input type="number" id="set-${name}" min="0">
+        <select id="unit-${name}">${unitOptions}</select>
+        <button onclick="setQuantity('${name}')">Set</button>
+      </div>
+      <div class="quantity-controls">
+        <label for="use-${name}">Use Qty:</label>
+        <input type="number" id="use-${name}" min="0">
+        <select id="use-unit-${name}">${unitOptions}</select>
+        <button onclick="useQuantity('${name}')">Use</button>
+        <p class="available-quantity">
+          Available: <span id="quantity-${name}">${displayQty}</span>
+          <span id="display-unit-${name}">${unit}</span>
+        </p>
+      </div>
+      ${lastUpdated?`<div class="timestamp">Last updated: ${new Date(lastUpdated).toLocaleString()}</div>`:''}
+    `;
+    list.appendChild(div);
   });
-
-  if (!hasChemicals) {
-    list.innerHTML = "<p>No chemicals found.</p>";
-  }
 }
 
-function goBack() {
-  window.location.href = "./homepage.html";
-}
-
-function setQuantity(chemical) {
-  let quantityInput = document.getElementById(`set-${chemical}`);
-  if (!quantityInput) return;
-
-  let quantity = quantityInput.value;
-  if (quantity !== "") {
-    localStorage.setItem(chemical, quantity);
-    document.getElementById(`quantity-${chemical}`).innerText = quantity;
-    quantityInput.value = "";
-  }
-}
-
-function useQuantity(chemical) {
-  let usedInput = document.getElementById(`use-${chemical}`);
-  if (!usedInput) return;
-
-  let used = parseInt(usedInput.value) || 0;
-  let stored = 0;
-  let storedData = localStorage.getItem(chemical);
-  if (storedData) {
-    try {
-      const parsed = JSON.parse(storedData);
-      stored = parseInt(parsed.quantity) || 0;
-    } catch {
-      stored = parseInt(storedData) || 0;
-    }
-  }
-  let newQuantity = Math.max(stored - used, 0);
-  localStorage.setItem(chemical, newQuantity);
-  document.getElementById(`quantity-${chemical}`).innerText = newQuantity;
-  usedInput.value = "";
-}
-
-const now = new Date();
-const updatedData = {
-  quantity: newQuantity,
-  lastUpdatedDate: now.toLocaleDateString(),
-  lastUpdatedTime: now.toLocaleTimeString(),
-};
-localStorage.setItem(chemical, JSON.stringify(updatedData));
-
-function resetQuantities() {
-  chemicals.forEach((chemical) => localStorage.removeItem(chemical));
+// === 5. Set & Use ===
+function setQuantity(name){
+  const qty = parseFloat(document.getElementById(`set-${name}`).value)||0;
+  const unit = document.getElementById(`unit-${name}`).value;
+  const baseQty = toBase(qty,unit);
+  const now = new Date().toISOString();
+  pushUndo(name);
+  localStorage.setItem(name,JSON.stringify({ baseQty,unit,lastUpdated:now }));
   loadChemicals();
 }
 
+function useQuantity(name){
+  const qty = parseFloat(document.getElementById(`use-${name}`).value)||0;
+  const uunit = document.getElementById(`use-unit-${name}`).value;
+  let o = JSON.parse(localStorage.getItem(name)||'{}'),
+      baseStored=o.baseQty||0,
+      used=toBase(qty,uunit),
+      newBase=Math.max(baseStored-used,0),
+      now=new Date().toISOString();
+  pushUndo(name);
+  localStorage.setItem(name,JSON.stringify({ baseQty:newBase,unit:o.unit,lastUpdated:now }));
+  loadChemicals();
+}
+
+// === 6. Undo ===
+function pushUndo(name){
+  if(undoStack.length>=10) undoStack.shift();
+  undoStack.push({name,data:localStorage.getItem(name)});
+}
+function undoLast(){
+  const e=undoStack.pop();
+  if(e){
+    if(e.data===null) localStorage.removeItem(e.name);
+    else localStorage.setItem(e.name,e.data);
+    loadChemicals();
+  } else alert("Nothing to undo");
+}
+
+// === 7. Search & Filter ===
+function setupSearch(){
+  document.getElementById("searchInput").addEventListener("input",e=>{
+    const t=e.target.value.toLowerCase();
+    document.querySelectorAll(".chemical-item").forEach(item=>{
+      const n=item.querySelector(".chemical-name").textContent.toLowerCase();
+      item.style.display=n.includes(t)?"":"none";
+    });
+  });
+}
+function filterByType(type){
+  document.querySelectorAll(".chemical-item").forEach(item=>{
+    item.style.display=(type==='all'||item.dataset.type===type)?"":"none";
+  });
+}
+
+// === 8. Theme Toggle ===
+function setupThemeFromStorage(){
+  if(localStorage.getItem("darkMode")==="enabled")
+    document.body.classList.add("dark-theme");
+}
+function toggleTheme(){
+  document.body.classList.toggle("dark-theme");
+  localStorage.setItem("darkMode",
+    document.body.classList.contains("dark-theme")?"enabled":"disabled"
+  );
+}
+
+// === 9. Bulk Import & Export ===
+function exportInventoryCSV(){
+  let csv="Name,Qty,Unit,LastUpdated\n";
+  chemicals.forEach(n=>{
+    const o=JSON.parse(localStorage.getItem(n)||'{}');
+    if(o.baseQty!=null){
+      csv+=`${n},${fromBase(o.baseQty,o.unit).toFixed(2)},${o.unit},${o.lastUpdated}\n`;
+    }
+  });
+  const b=new Blob([csv],{type:"text/csv"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download="inventory.csv";a.click();
+}
+
+function showBulkImportModal(){
+  document.getElementById("bulkImportModal").style.display="flex";
+}
+function closeModal(id){
+  document.getElementById(id).style.display="none";
+}
+function processBulkImport(){
+  document.getElementById("bulkImportText").value.trim().split("\n").forEach(line=>{
+    const [n,q,u]=line.split(",").map(s=>s.trim());
+    if(n&&q&&u){
+      const bq=toBase(parseFloat(q),u),now=new Date().toISOString();
+      localStorage.setItem(n,JSON.stringify({baseQty:bq,unit:u,lastUpdated:now}));
+    }
+  });
+  closeModal("bulkImportModal");
+  loadChemicals();
+}
+
+// === 10. Navigation & Stubs ===
+function manualEdit(){ alert("Manual edit modal coming soon!"); }
+function goBack(){ window.location.href="homepage.html"; }
+function generateReport(){ window.location.href="inventory-report.html"; }
+
+
+// === 11. Theme toggle === 
 function setupThemeToggle() {
   const toggleButton = document.getElementById("toggleTheme");
   if (!toggleButton) return;
@@ -317,105 +416,24 @@ function setupThemeToggle() {
   });
 }
 
-function displayLoggedInUser() {
-  const userNameSpan = document.getElementById("user-name");
-  const userEmailSpan = document.getElementById("user-email");
-  if (!userNameSpan || !userEmailSpan) return;
-
-  // Simulate retrieving user data.  Replace this with your actual user data retrieval.
-  const user = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-  };
-
-  userNameSpan.textContent = `Name: ${user.name}`;
-  userEmailSpan.textContent = `Email: ${user.email}`;
-}
-
-function setupSearch() {
-  const searchInput = document.getElementById("searchInput");
-  if (!searchInput) return;
-
-  searchInput.addEventListener("input", () => {
-    const searchTerm = searchInput.value.toLowerCase();
-    const chemicalItems = document.querySelectorAll(".chemical-item");
-
-    chemicalItems.forEach((item) => {
-      const chemicalName = item
-        .querySelector(".chemical-name")
-        .textContent.toLowerCase();
-      if (chemicalName.includes(searchTerm)) {
-        item.style.display = "";
-      } else {
-        item.style.display = "none";
+function processBulkImport(){
+  const validUnits = ['ml', 'l', 'mg', 'g', 'kg'];
+  let importCount = 0;
+  document.getElementById("bulkImportText").value.trim().split("\n").forEach(line => {
+      const [n, q, u] = line.split(",").map(s => s.trim());
+      if (n && q && u && !isNaN(parseFloat(q)) && validUnits.includes(u.toLowerCase())) {
+          const bq = toBase(parseFloat(q), u.toLowerCase()), now = new Date().toISOString();
+          localStorage.setItem(n, JSON.stringify({ baseQty: bq, unit: u.toLowerCase(), lastUpdated: now }));
+          importCount++;
+      } else if (n || q || u) {
+          alert(`Invalid CSV line: "${line}". Please ensure format is Name,Qty,Unit (e.g., Ethanol,500,ml) and unit is one of: ${validUnits.join(', ')}.`);
       }
-    });
   });
-}
-
-function report() {
-  window.location.href = "inventory-report.html";
-}
-
-function setQuantity(chemical) {
-  let quantityInput = document.getElementById(`set-${chemical}`);
-  if (!quantityInput) return;
-
-  let quantity = quantityInput.value;
-  if (quantity !== "") {
-    const now = new Date();
-    const lastUpdatedDate = now.toLocaleDateString();
-    const lastUpdatedTime = now.toLocaleTimeString();
-
-    const dataToStore = {
-      quantity: quantity,
-      lastUpdatedDate: lastUpdatedDate,
-      lastUpdatedTime: lastUpdatedTime,
-    };
-
-    localStorage.setItem(chemical, JSON.stringify(dataToStore));
-    document.getElementById(`quantity-${chemical}`).innerText = quantity;
-    quantityInput.value = "";
-
-    console.log(
-      `Saved ${chemical} with quantity ${quantity} at ${lastUpdatedDate} ${lastUpdatedTime}`
-    ); // For debugging
+  closeModal("bulkImportModal");
+  loadChemicals();
+  if (importCount > 0) {
+      alert(`Successfully imported ${importCount} items.`);
+  } else if (document.getElementById("bulkImportText").value.trim()) {
+      alert("No valid chemical data found in the provided CSV.");
   }
-}
-
-function munual() {
-  const chemicalBoxes = document.querySelectorAll('.chemical-item');
-
-  chemicalBoxes.forEach(box => {
-    box.classList.add('highlight-edit'); // Add highlight
-
-    // Only allow one click per edit mode
-    box.onclick = () => {
-      const name = box.querySelector('strong').innerText.trim();
-      let chemicals = JSON.parse(localStorage.getItem("chemicals")) || [];
-      const index = chemicals.findIndex(chem => chem.name.trim().toLowerCase() === name.toLowerCase());
-
-      if (index !== -1) {
-        const newName = prompt("Enter new name:", chemicals[index].name)?.trim() || chemicals[index].name;
-        const newQuantity = prompt("Enter new quantity:", chemicals[index].quantity)?.trim() || chemicals[index].quantity;
-        const newUnit = prompt("Enter new unit:", chemicals[index].unit)?.trim() || chemicals[index].unit;
-
-        chemicals[index] = {
-          name: newName,
-          quantity: newQuantity,
-          unit: newUnit
-        };
-
-        localStorage.setItem("chemicals", JSON.stringify(chemicals));
-        displayChemicals(); // Refresh list
-        alert("Chemical updated successfully.");
-      }
-
-      // Remove highlight from all boxes and their click events
-      chemicalBoxes.forEach(b => {
-        b.classList.remove('highlight-edit');
-        b.onclick = null;
-      });
-    };
-  });
 }
